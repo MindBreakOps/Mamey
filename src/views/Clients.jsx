@@ -19,7 +19,14 @@ export default function Clients() {
 	  {/* Hero Stats */}
 	  <div style={{ background: 'var(--navy)', borderRadius: '16px', padding: '50px', marginBottom: '40px', display: 'flex', flexWrap: 'wrap', gap: '40px', color: 'white', justifyContent: 'space-between' }}>
 		<div style={{ maxWidth: '600px' }}>
-		  <h3 style={{ fontFamily: 'Playfair Display', fontSize: '24px', marginBottom: '16px' }}>Asset Base & Financial Strength</h3>
+		 <h3 style={{ 
+		   fontFamily: "'Playfair Display', serif", 
+		   fontSize: '24px', 
+		   marginBottom: '16px', 
+		   color: 'white' // Force white color
+		 }}>
+		   Asset Base & Financial Strength
+		 </h3>
 		  <p style={{ color: 'rgba(255,255,255,0.8)', lineHeight: '1.7' }}>
 			Our total asset base is currently valued at over $5 million. We are sufficiently equipped to handle major transactions locally and internationally, backed by formal term contracts and MOUs.
 		  </p>
