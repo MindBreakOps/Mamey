@@ -1,0 +1,131 @@
+/* ── 1. GLOBAL RESET & SIZING ── */
+*, *::before, *::after {
+  box-sizing: border-box; 
+}
+
+html, body {
+  margin: 0 !important;
+  padding: 0;
+  background-color: var(--bg-light);
+  width: 100%;
+  overflow-x: hidden;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* ── 2. SLEEK MAIN CONTAINER ── */
+.main-content {
+  flex: 1;
+  width: 100%;
+  max-width: 1200px; 
+  margin: 0 auto;
+  padding: 40px 40px;
+  border-top: 1px solid transparent; 
+}
+
+.pro-container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  animation: fadeIn 0.5s ease forwards;
+}
+
+/* ── 3. PREMIUM NAVBAR UI (Fixed Contrast & Syntax) ── */
+.pro-navbar {
+  position: sticky;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 9999;
+  background: var(--white);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+}
+
+.navbar-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 15px 40px;
+}
+
+/* Fix Brand Colors */
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+}
+
+.nav-brand h2 {
+  color: var(--navy) !important;
+}
+
+.nav-brand span {
+  color: var(--text-muted) !important;
+}
+
+/* Fix Navigation Links */
+.nav-desktop {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.nav-link {
+  color: var(--text-main); 
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 0.95rem;
+  padding: 8px 12px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.nav-link:hover, .nav-link.active {
+  color: var(--navy);
+  background: rgba(28, 117, 188, 0.05);
+  font-weight: 600;
+}
+
+/* Fix Translation Button */
+.lang-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--navy);
+  color: var(--white);
+  border: none;
+  padding: 8px 18px;
+  border-radius: 50px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 0.85rem;
+  transition: 0.2s;
+}
+
+.lang-toggle:hover {
+  background: var(--navy-dark);
+  transform: translateY(-1px);
+}
+
+/* Hide Hamburger Menu on Desktop */
+.mobile-toggle {
+  display: none; 
+  background: transparent;
+  border: none;
+  color: var(--navy);
+  cursor: pointer;
+}
+
+/* Only show Hamburger on Mobile */
+@media (max-width: 900px) {
+  .nav-desktop { display: none; }
+  .mobile-toggle { display: block; }
+}
