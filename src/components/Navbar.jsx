@@ -105,6 +105,7 @@ export default function Navbar() {
   const navItems = [
 	{ path: '/',          label: t?.home      ?? 'Home'                 },
 	{ path: '/about',     label: t?.about     ?? 'About Us'             },
+	{ path: '/blog', label: t?.navBlog ?? 'News' },
 	{ path: '/services',  label: t?.services  ?? 'Our Services'         },
 	{ path: '/projects',  label: t?.projects  ?? 'Projects & Operations'},
 	{ path: '/legal',     label: t?.legal     ?? 'Legal Documents'      },

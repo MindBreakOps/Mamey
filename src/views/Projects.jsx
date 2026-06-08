@@ -64,20 +64,20 @@ function LightboxModal({ proj, onClose }) {
   return (
 	<div className="prj-overlay" onClick={onClose}>
 	  <div className="prj-modal" onClick={(e) => e.stopPropagation()}>
-		<div className="prj-modal-media">
-		  {type === 'video' ? (
-			<video src={direct} controls autoPlay className="prj-modal-video" />
-		  ) : type === 'pdf' ? (
-			<iframe src={direct} title={title} style={{ width: '100%', height: '100%', minHeight: '60vh', border: 'none' }} />
-		  ) : (
-			<img
-			  src={thumb || direct}
-			  alt={title}
-			  className="prj-modal-img"
-			  onError={(e) => { e.target.src = direct; }}
-			/>
-		  )}
-		</div>
+	<div className="prj-modal-media">
+	  {type === 'video' ? (
+		<video src={directUrl} controls autoPlay className="prj-modal-video" />
+	  ) : (type === 'pdf' || type === 'drive-preview') ? ( // <-- ADDED 'drive-preview' HERE
+		<iframe src={previewUrl} title={title} style={{ width: '100%', height: '100%', minHeight: '60vh', border: 'none' }} />
+	  ) : (
+		<img
+		  src={thumb || directUrl}
+		  alt={title}
+		  className="prj-modal-img"
+		  onError={(e) => { e.target.src = directUrl; }}
+		/>
+	  )}
+	</div>
 		<div className="prj-modal-info">
 		  <button className="prj-modal-close" onClick={onClose}><CloseIcon /></button>
 		  {date && (

@@ -57,7 +57,7 @@ export default function Footer() {
 			{/* ── Brand column ── */}
 			<div>
 			  <div className="footer-brand-logo">
-				<img src="/mamey.png" alt="Mamey logo" width="40" height="40" />
+				<img src="/mamey.png" alt="" aria-hidden="true" width="38" height="38" />
 				<span className="footer-brand-name">
 				  {t?.siteName ?? 'MAMEY'}
 				</span>
@@ -169,13 +169,13 @@ export default function Footer() {
 			{t?.footerCopyright ?? 'Mamey For General Trading & Investment Co. Ltd. All rights reserved.'}
 		  </span>
 		  <div className="footer-bar-links">
-			<a href="/privacy" className="footer-bar-link">
-			  {t?.footerPrivacy ?? 'Privacy Policy'}
-			</a>
-			<a href="/terms" className="footer-bar-link">
-			  {t?.footerTerms ?? 'Terms of Use'}
-			</a>
-		  </div>
+			  <Link to="/privacy" className="footer-bar-link">
+				{t?.footerPrivacy ?? 'Privacy Policy'}
+			  </Link>
+			  <Link to="/terms" className="footer-bar-link">
+				{t?.footerTerms ?? 'Terms of Use'}
+			  </Link>
+			</div>
 		</div>
 	  </div>
 
@@ -197,6 +197,7 @@ export default function Footer() {
 		  font-family: var(--font-body);
 		  transition: background var(--t-fast), color var(--t-fast), transform var(--t-fast);
 		}
+		
 		.footer-back-top:hover {
 		  background: rgba(255,255,255,0.18);
 		  color: white;

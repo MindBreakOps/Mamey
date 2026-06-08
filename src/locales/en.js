@@ -91,6 +91,15 @@ export const en = {
   deptHRSub: "Public Relations",
   deptProgram: "Program Manager",
   deptProgramSub: "Operations Manager",
+  downloadPdf: "Download Profile / PDF",
+  navBlog: "News",
+  blogKicker: "News & Updates",
+  blogTitle: "Mamey Insights",
+  blogSub: "Stay updated with the latest news, operational highlights, and corporate announcements from across our network.",
+  loadingBlog: "Loading latest articles…",
+  emptyBlog: "No news articles have been published yet.",
+  readArticle: "Read Article",
+
 
   // ── Services ──────────────────────────────────────────────────────────────
   servicesTitle:      "Our Services",
@@ -179,6 +188,13 @@ export const en = {
   servicesSub: "Comprehensive operational divisions managed by Mamey Group across all geographic sectors.",
   loadingServices: "Loading enterprise services…",
   emptyServices: "No service entries found. Add them via the dashboard.",
+  descKakira: "Major agricultural supplier and manufacturer in East Africa.",
+  descGulf: "Global trading partner for high-volume commodity imports.",
+  descMopishi: "Strategic milling operations and food processing distribution.",
+  descUndp: "Logistics and supply chain partner for UN development programs.",
+  descUnifies: "Provision of operational support for international missions.",
+  descMoh: "Official supplier for government health infrastructure initiatives.",
+  descMoep: "Consulting and logistical fulfillment for national planning.",
 
   // ── Contact ───────────────────────────────────────────────────────────────
   contactTitle:       "Get In Touch",

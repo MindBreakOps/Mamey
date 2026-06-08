@@ -627,11 +627,13 @@ ul, ol   { list-style: none; }
   gap: var(--sp-48);
   padding-bottom: var(--sp-40);
 }
-.footer-brand-logo {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-12);
-  margin-bottom: var(--sp-20);
+/* ── FOOTER LOGO ASPECT RATIO FIX ── */
+.footer-brand img, 
+.footer-logo {
+  width: auto !important;
+  height: clamp(36px, 5vw, 48px) !important; /* Matches a nice height */
+  object-fit: contain !important;
+  max-width: 100%;
 }
 .footer-brand-logo img { width: 38px; }
 .footer-brand-name {
