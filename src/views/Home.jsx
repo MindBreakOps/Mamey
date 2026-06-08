@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { AppContext } from '../context/AppContext';
 import { supabase } from '../supabaseClient';
+
 function useCountUp(target, duration = 1800, start = false) {
   const [count, setCount] = useState(0);
   useEffect(() => {
@@ -33,7 +34,6 @@ function StatCard({ value, label, suffix, animate }) {
 }
 
 export default function Home() {
-  // 1. Grab the translation dictionary from Context
   const { t } = useContext(AppContext);
   
   const heroRef = useRef(null);
@@ -43,7 +43,6 @@ export default function Home() {
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [visitorCount, setVisitorCount] = useState(0);
 
-  // 2. Move stats inside the component so they can be translated
   const stats = [
 	{ value: '2014', label: t?.statFounded ?? 'Founded', suffix: '' },
 	{ value: '5', label: t?.statAssetValue ?? 'Asset Value', suffix: 'M+' },
@@ -51,7 +50,6 @@ export default function Home() {
 	{ value: '2', label: t?.statCountries ?? 'Countries', suffix: '+' },
   ];
 
-  // 3. Move pillars inside the component so they can be translated
   const pillars = [
 	{
 	  icon: (
@@ -189,16 +187,28 @@ export default function Home() {
 		  background-size: 60px 60px;
 		  pointer-events: none;
 		}
+
+		/* ── NEW: HERO TOP ROW FOR PROPER ALIGNMENT ── */
+		.mmy-hero-top-row {
+		  display: flex;
+		  justify-content: space-between;
+		  align-items: center;
+		  flex-wrap: wrap;
+		  gap: 16px;
+		  margin-bottom: 20px;
+		  position: relative;
+		}
+
 		.mmy-hero-kicker {
 		  font-size: clamp(9px, 1.5vw, 11px);
 		  letter-spacing: 3px;
 		  text-transform: uppercase;
 		  color: var(--gold, #d4af37);
-		  margin-bottom: 20px;
+		  font-weight: 700; /* Added for boldness */
+		  margin: 0;
 		  opacity: 0;
 		  transform: translateY(12px);
 		  transition: opacity 0.6s ease 0.1s, transform 0.6s ease 0.1s;
-		  position: relative;
 		  display: flex;
 		  align-items: center;
 		  gap: 12px;
@@ -210,6 +220,42 @@ export default function Home() {
 		  background: var(--gold, #d4af37);
 		  flex-shrink: 0;
 		}
+
+		/* ── VISITOR COUNTER PILL (FIXED) ── */
+		.mmy-visitor-pill {
+		  display: flex;
+		  align-items: center;
+		  gap: 7px;
+		  background: rgba(255, 255, 255, 0.15); /* Increased opacity for better visibility */
+		  border: 1px solid rgba(212, 175, 55, 0.5); /* Stronger border */
+		  backdrop-filter: blur(8px);
+		  border-radius: 50px;
+		  padding: 6px 14px 6px 10px;
+		  color: white; /* Changed to white for better contrast */
+		  font-size: 0.75rem;
+		  font-weight: 600; /* Made text bolder */
+		  letter-spacing: 0.5px;
+		  pointer-events: none;
+		  opacity: 1; /* Forced visibility */
+		  z-index: 10; /* Ensures it stays on top */
+		}
+		.mmy-visitor-pill.visible { opacity: 1; }
+		.mmy-visitor-dot {
+		  width: 6px; height: 6px;
+		  border-radius: 50%;
+		  background: var(--gold, #d4af37);
+		  flex-shrink: 0;
+		  animation: mmy-pulse 2s infinite;
+		}
+		.mmy-visitor-count {
+		  color: var(--gold, #d4af37);
+		  font-weight: 600;
+		}
+		@keyframes mmy-pulse {
+		  0%, 100% { opacity: 1; transform: scale(1); }
+		  50% { opacity: 0.5; transform: scale(0.8); }
+		}
+
 		.mmy-hero h1 {
 		  font-family: 'Playfair Display', serif;
 		  font-size: clamp(2rem, 5.5vw, 4.2rem);
@@ -426,6 +472,7 @@ export default function Home() {
 		  font-family: 'Playfair Display', serif;
 		  font-size: clamp(1.4rem, 3.5vw, 2rem);
 		  color: var(--gold, #d4af37);
+		  font-weight: 700; /* Added for boldness */
 		  line-height: 1;
 		}
 		.mmy-origin-badge-inner small {
@@ -434,43 +481,6 @@ export default function Home() {
 		  letter-spacing: 2px;
 		  color: rgba(255,255,255,0.6);
 		  margin-top: 4px;
-		}
-
-		/* ── VISITOR COUNTER ── */
-		.mmy-visitor-pill {
-		  position: absolute;
-		  bottom: 20px;
-		  right: 24px;
-		  display: flex;
-		  align-items: center;
-		  gap: 7px;
-		  background: rgba(255,255,255,0.07);
-		  border: 1px solid rgba(212,175,55,0.25);
-		  backdrop-filter: blur(8px);
-		  border-radius: 50px;
-		  padding: 6px 14px 6px 10px;
-		  color: rgba(255,255,255,0.65);
-		  font-size: 0.72rem;
-		  letter-spacing: 0.5px;
-		  pointer-events: none;
-		  opacity: 0;
-		  transition: opacity 0.5s ease 0.8s;
-		}
-		.mmy-visitor-pill.visible { opacity: 1; }
-		.mmy-visitor-dot {
-		  width: 6px; height: 6px;
-		  border-radius: 50%;
-		  background: var(--gold, #d4af37);
-		  flex-shrink: 0;
-		  animation: mmy-pulse 2s infinite;
-		}
-		.mmy-visitor-count {
-		  color: var(--gold, #d4af37);
-		  font-weight: 600;
-		}
-		@keyframes mmy-pulse {
-		  0%, 100% { opacity: 1; transform: scale(1); }
-		  50% { opacity: 0.5; transform: scale(0.8); }
 		}
 	  `}</style>
 
@@ -489,27 +499,33 @@ export default function Home() {
 		  />
 		  <div className="mmy-hero-grid" />
 
-		  {/* ── VISITOR COUNTER PILL ── */}
-		  {visitorCount > 0 && (
-			<div className={`mmy-visitor-pill ${heroLoaded ? 'visible' : ''}`}>
-			  <span className="mmy-visitor-dot" />
-			  <span className="mmy-visitor-count">{visitorCount.toLocaleString()}</span>
-			  <span>{t?.visitorLabel ?? 'site visitors'}</span>
-			</div>
-		  )}
+		  {/* ── ALIGNED TOP ROW: KICKER & VISITOR PILL ── */}
+		  <div className="mmy-hero-top-row">
+			<div className="mmy-hero-kicker">{t?.heroEyebrow ?? 'Mamey Group — Est. 2014'}</div>
+			
+			{visitorCount > 0 && (
+			  <div className={`mmy-visitor-pill ${heroLoaded ? 'visible' : ''}`}>
+				<span className="mmy-visitor-dot" />
+				<span className="mmy-visitor-count">{visitorCount.toLocaleString()}</span>
+				<span>{t?.visitorLabel ?? 'site visitors'}</span>
+			  </div>
+			)}
+		  </div>
 
-		  <div className="mmy-hero-kicker">{t?.heroEyebrow ?? 'Mamey Group — Est. 2014'}</div>
 		  <h1>{t?.heroTitle ?? 'Delivering Quality Across Africa & The Middle East'}</h1>
 		  <p className="mmy-hero-sub">
 			{t?.heroSubtitle ?? 'A South Sudanese enterprise specialising in the import, distribution, and supply of foodstuffs, building materials, industrial gases, logistics, and essential services.'}
 		  </p>
-		  <Link to="/services" className="mmy-hero-cta">
-			{t?.heroCta ?? 'Explore Our Services'}
-			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
-			  <line x1="5" y1="12" x2="19" y2="12" />
-			  <polyline points="12 5 19 12 12 19" />
-			</svg>
-		  </Link>
+		  
+		  <div style={{ position: 'relative' }}>
+			<Link to="/services" className="mmy-hero-cta">
+			  {t?.heroCta ?? 'Explore Our Services'}
+			  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
+				<line x1="5" y1="12" x2="19" y2="12" />
+				<polyline points="12 5 19 12 12 19" />
+			  </svg>
+			</Link>
+		  </div>
 		</div>
 
 		{/* ── STATS ── */}

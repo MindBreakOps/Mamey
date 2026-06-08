@@ -1,95 +1,50 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useContext } from 'react';
 import { supabase } from '../supabaseClient';
+import { AppContext } from '../context/AppContext'; // Imported Context
 
-/* ── SVG Icons (inline — no broken lucide refs) ── */
-const ShieldIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width="26" height="26">
-	<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-	<polyline points="9 12 11 14 15 10" />
-  </svg>
-);
-const DownloadIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="15" height="15">
-	<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-	<polyline points="7 10 12 15 17 10" />
-	<line x1="12" y1="15" x2="12" y2="3" />
-  </svg>
-);
-const EyeIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="15" height="15">
-	<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-	<circle cx="12" cy="12" r="3" />
-  </svg>
-);
-const FileIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width="40" height="40">
-	<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-	<polyline points="14 2 14 8 20 8" />
-	<line x1="16" y1="13" x2="8" y2="13" />
-	<line x1="16" y1="17" x2="8" y2="17" />
-	<polyline points="10 9 9 9 8 9" />
-  </svg>
-);
-const LockIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width="14" height="14">
-	<rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-	<path d="M7 11V7a5 5 0 0 1 10 0v4" />
-  </svg>
-);
-const CloseIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="20" height="20">
-	<line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-  </svg>
-);
+/* ── SVG Icons ── */
+const ShieldIcon = () => ( <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width="26" height="26"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /><polyline points="9 12 11 14 15 10" /></svg> );
+const DownloadIcon = () => ( <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="15" height="15"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg> );
+const EyeIcon = () => ( <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="15" height="15"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg> );
+const FileIcon = () => ( <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width="40" height="40"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" /></svg> );
+const LockIcon = () => ( <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg> );
+const CloseIcon = () => ( <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="20" height="20"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg> );
 
 /* ────────────────────────────────────────────────────────
    GOOGLE DRIVE URL FIXER
-   Converts any Drive share link → direct embeddable URL
-   Fixes the "?" / question mark preview issue.
 ──────────────────────────────────────────────────────── */
 function resolveGoogleDriveUrl(rawUrl) {
   if (!rawUrl) return null;
   const url = rawUrl.trim();
-
-  // Already a direct download or export link — pass through
   if (url.includes('export=download') || url.includes('uc?id') || url.includes('drive.google.com/uc')) {
 	return url;
   }
-
-  // Pattern: /file/d/{ID}/view  OR  /file/d/{ID}/preview  OR  /open?id={ID}
   let fileId = null;
-
   const matchFile = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
   if (matchFile) fileId = matchFile[1];
-
   if (!fileId) {
 	const matchOpen = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
 	if (matchOpen) fileId = matchOpen[1];
   }
-
   if (fileId) {
 	return `https://drive.google.com/uc?export=download&id=${fileId}`;
   }
-
-  // Not a Drive URL — return as-is
   return url;
 }
 
-/* Detect media type from URL */
 function detectMediaType(url) {
   if (!url) return 'unknown';
   const lower = url.toLowerCase();
   if (lower.includes('.pdf') || lower.includes('application/pdf')) return 'pdf';
   if (/\.(jpg|jpeg|png|gif|webp|svg|bmp)/.test(lower)) return 'image';
   if (/\.(mp4|webm|ogg|mov|avi)/.test(lower)) return 'video';
-  if (lower.includes('export=download')) return 'download'; // Drive file
+  if (lower.includes('export=download')) return 'download';
   return 'download';
 }
 
 /* ── Media Preview Modal ── */
-
- /* ── Media Preview Modal ── */
  function MediaModal({ url, title, onClose }) {
+   const { t } = useContext(AppContext); // Added context here
    const direct = resolveGoogleDriveUrl(url);
    const mediaType = detectMediaType(url);
  
@@ -113,9 +68,9 @@ function detectMediaType(url) {
 		   {mediaType === 'download' && (
 			 <div className="lgl-modal-download">
 			   <FileIcon />
-			   <p>This file cannot be previewed in-browser.</p>
+			   <p>{t?.legalNoPreview ?? 'This file cannot be previewed in-browser.'}</p>
 			   <a href={direct} target="_blank" rel="noreferrer" className="lgl-dl-btn" download>
-				 <DownloadIcon /> Download File
+				 <DownloadIcon /> {t?.downloadFile ?? 'Download File'}
 			   </a>
 			 </div>
 		   )}
@@ -124,7 +79,6 @@ function detectMediaType(url) {
 	 </div>
    );
  }
-
 
 /* ── Small Thumbnail for card ── */
 function DocThumbnail({ url }) {
@@ -164,14 +118,15 @@ function useReveal(threshold = 0.1) {
 	const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) setVisible(true); }, { threshold });
 	obs.observe(el);
 	return () => obs.disconnect();
-  }, []);
+  }, [threshold]);
   return [ref, visible];
 }
 
 export default function LegalDocs() {
+  const { t } = useContext(AppContext);
   const [docs, setDocs] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [modal, setModal] = useState(null); // { url, title }
+  const [modal, setModal] = useState(null); 
   const [gridRef, gridVisible] = useReveal(0.1);
 
   useEffect(() => {
@@ -256,7 +211,6 @@ export default function LegalDocs() {
 		  border-radius: 16px;
 		  border: 1px solid rgba(0,0,0,0.06);
 		  overflow: hidden;
-		  /* Removed opacity and transform so it ALWAYS shows */
 		  transition: box-shadow 0.25s, border-color 0.25s, transform 0.25s;
 		  cursor: default;
 		}
@@ -418,27 +372,27 @@ export default function LegalDocs() {
 
 		{/* HEADER */}
 		<div className="lgl-header">
-		  <p className="lgl-kicker">Compliance &amp; Verification</p>
-		  <h1 className="lgl-h1">Legal Documents</h1>
-		  <p className="lgl-sub">Secure registry of operational licences, chamber of commerce certifications, and corporate compliance files.</p>
+		  <p className="lgl-kicker">{t?.legalKicker ?? 'Compliance & Verification'}</p>
+		  <h1 className="lgl-h1">{t?.legalTitle ?? 'Legal Documents'}</h1>
+		  <p className="lgl-sub">{t?.legalSub ?? 'Secure registry of operational licences, chamber of commerce certifications, and corporate compliance files.'}</p>
 		</div>
 
 		{/* SECURITY BAR */}
 		<div className="lgl-security-bar">
 		  <LockIcon />
-		  <span>Verified Registry</span> — All documents are official and current. Files open directly via secure viewer.
+		  <span>{t?.legalVerified ?? 'Verified Registry'}</span> — {t?.legalVerifiedDesc ?? 'All documents are official and current. Files open directly via secure viewer.'}
 		</div>
 
 		{/* CONTENT */}
 		{loading ? (
 		  <div className="lgl-loading">
 			<div className="lgl-spinner" />
-			<p>Loading secure document registry…</p>
+			<p>{t?.legalLoading ?? 'Loading secure document registry…'}</p>
 		  </div>
 		) : docs.length === 0 ? (
 		  <div className="lgl-empty">
 			<div className="lgl-empty-icon"><FileIcon /></div>
-			<p>No legal documents currently available.</p>
+			<p>{t?.legalEmpty ?? 'No legal documents currently available.'}</p>
 		  </div>
 		) : (
 		  <div className="lgl-grid" ref={gridRef}>
@@ -469,7 +423,7 @@ export default function LegalDocs() {
 						className="lgl-btn lgl-btn-primary"
 						onClick={() => setModal({ url: doc.media_url, title: doc.title })}
 					  >
-						<EyeIcon /> View Document
+						<EyeIcon /> {t?.viewDocument ?? 'View Document'}
 					  </button>
 					  <a
 						href={resolveGoogleDriveUrl(doc.media_url)}
@@ -478,7 +432,7 @@ export default function LegalDocs() {
 						className="lgl-btn lgl-btn-outline"
 						download
 					  >
-						<DownloadIcon /> Download
+						<DownloadIcon /> {t?.downloadDocument ?? 'Download'}
 					  </a>
 					</div>
 				  )}

@@ -3,7 +3,7 @@ import { supabase } from '../supabaseClient';
 
 /* ── Google Apps Script Webhook ── */
 const GAS_WEBHOOK_URL =
-  'https://script.google.com/macros/s/AKfycbxX3xGY3a3EBue0uactleGhOdzFgurAV-EeKNtIkKWn65Bhk1v03CVvUXGLalTGo27IlA/exec';
+  'https://script.google.com/macros/s/AKfycbypki4pdp9XHSkang32V3UI54NydVak3ULGLHzafGwwxnjSyoNtT1SYQ5uFHYYOlwPzXQ/exec';
 
 /* ────────────────────────────────────────────────────────────
    INLINE SVG ICONS — zero external dependency
@@ -283,28 +283,113 @@ export default function AdminDashboard() {
 	}
   };
 
-  /* ── Google Drive Upload ── */
-  const uploadToDrive = (file) =>
-	new Promise((resolve, reject) => {
-	  const reader = new FileReader();
-	  reader.onload = async (e) => {
-		try {
-		  const res = await fetch(GAS_WEBHOOK_URL, {
-			method: 'POST',
-			body: JSON.stringify({
-			  fileName: file.name,
-			  mimeType: file.type,
-			  base64:   e.target.result,
-			}),
-		  });
-		  const result = await res.json();
-		  result.success ? resolve(result.url) : reject(new Error(result.error || 'GAS returned success: false'));
-		} catch (err) { reject(err); }
+  /* ── Upload progress ── */
+  const [uploadProgress, setUploadProgress] = useState(0);
+
+  /* ── Pre-upload size gate ── */
+  // GAS has ~50MB payload cap; base64 inflates by ~33%, so raw limit is ~35MB.
+  // Images get compressed so they're fine. PDFs/videos can't be compressed in-browser.
+  const MAX_IMAGE_MB  = 20;  // before compression — caught just in case
+  const MAX_OTHER_MB  = 8;   // PDFs, videos — hard cap (can't compress these)
+
+  const checkFileSize = (file) => {
+	const mb = file.size / 1024 / 1024;
+	if (file.type.startsWith('image/') && mb > MAX_IMAGE_MB)
+	  throw new Error(`Image is ${mb.toFixed(1)} MB. Max allowed is ${MAX_IMAGE_MB} MB.`);
+	if (!file.type.startsWith('image/') && mb > MAX_OTHER_MB)
+	  throw new Error(`File is ${mb.toFixed(1)} MB. PDFs and videos must be under ${MAX_OTHER_MB} MB (GAS limit). Try compressing the PDF first.`);
+  };
+
+  /* ── Compress images before uploading to GAS ── */
+  const compressImage = (file) =>
+	new Promise((resolve) => {
+	  if (!file.type.startsWith('image/')) { resolve(file); return; }
+
+	  const img = new Image();
+	  const url = URL.createObjectURL(file);
+
+	  img.onload = () => {
+		URL.revokeObjectURL(url);
+
+		// Scale down to max 1200px on the long edge
+		const MAX_PX  = 1200;
+		const longest = Math.max(img.width, img.height);
+		const scale   = longest > MAX_PX ? MAX_PX / longest : 1;
+
+		const canvas  = document.createElement('canvas');
+		canvas.width  = Math.round(img.width  * scale);
+		canvas.height = Math.round(img.height * scale);
+		canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+
+		// Start at 0.80 quality; if still >500 KB try 0.65, then 0.50
+		const tryEncode = (q) => {
+		  canvas.toBlob((blob) => {
+			if (blob.size > 500 * 1024 && q > 0.50) {
+			  tryEncode(Math.max(q - 0.15, 0.50));
+			} else {
+			  resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' }));
+			}
+		  }, 'image/jpeg', q);
+		};
+		tryEncode(0.80);
 	  };
-	  reader.onerror = (err) => reject(err);
-	  reader.readAsDataURL(file);
+
+	  img.onerror = () => resolve(file); // fallback: send original
+	  img.src = url;
 	});
 
+/* ── Google Drive Upload via GAS ── */
+	  const uploadToDrive = (file) =>
+		new Promise((resolve, reject) => {
+		  // 🚀 FIXED: Increased timeout to 3 full minutes (180,000 ms). 
+		  // Large PDFs take Google Apps Script a long time to parse as JSON.
+		  const timer = setTimeout(
+			() => reject(new Error('Google Drive took too long (> 3 mins). Please compress your PDF to a smaller size and try again.')),
+			180_000
+		  );
+		  
+		  const reader = new FileReader();
+		  reader.onload = async (e) => {
+			try {
+			  setUploadProgress(10);
+			  
+			  // Slower progress bar to accurately match Google's processing speed for large files
+			  const progressInterval = setInterval(() => {
+				setUploadProgress(prev => prev < 92 ? prev + 3 : prev);
+			  }, 3000);
+	 
+			  const res = await fetch(GAS_WEBHOOK_URL, {
+				method: 'POST',
+				headers: {
+				  'Content-Type': 'text/plain;charset=utf-8',
+				},
+				body: JSON.stringify({
+				  fileName: file.name,
+				  mimeType: file.type,
+				  base64:   e.target.result,
+				}),
+			  });
+			  
+			  clearInterval(progressInterval);
+			  clearTimeout(timer);
+			  setUploadProgress(96);
+			  
+			  const result = await res.json();
+			  
+			  if (result.success) {
+				setUploadProgress(100);
+				resolve(result.url); 
+			  } else {
+				reject(new Error(result.error || 'GAS returned success: false'));
+			  }
+			} catch (err) {
+			  clearTimeout(timer);
+			  reject(err);
+			}
+		  };
+		  reader.onerror = (err) => { clearTimeout(timer); reject(err); };
+		  reader.readAsDataURL(file);
+		});
   /* ── Edit Mode ── */
   const handleEditClick = (item) => {
 	setEditingId(item.id);
@@ -328,50 +413,66 @@ export default function AdminDashboard() {
   };
 
   /* ── Submit ── */
-  const handleSubmitContent = async (e) => {
-	e.preventDefault();
-	if (!contentForm.title.trim()) { toast('A Title is required.', 'error'); return; }
-
-	setLoading(true);
-	setUploading(!!selectedFile);
-
-	try {
-	  let mediaUrl = null;
-	  if (selectedFile) {
-		mediaUrl = await uploadToDrive(selectedFile);
-		if (!mediaUrl) throw new Error('Google Drive failed to return a valid URL.');
+	const handleSubmitContent = async (e) => {
+	  e.preventDefault();
+	  if (!contentForm.title.trim()) { toast('A Title is required.', 'error'); return; }
+  
+	  setLoading(true);
+	  setUploading(!!selectedFile);
+	  setUploadProgress(0);
+  
+	  try {
+		let mediaUrl = null;
+		if (selectedFile) {
+		  // Gate: reject oversized files before wasting time
+		  checkFileSize(selectedFile);
+		  // Compress images before sending to GAS (PDFs/videos pass through unchanged)
+		  toast('Preparing file…');
+		  const fileToUpload = await compressImage(selectedFile);
+		  const originalMB   = (selectedFile.size  / 1024 / 1024).toFixed(1);
+		  const compressedMB = (fileToUpload.size  / 1024 / 1024).toFixed(1);
+		  const label = selectedFile.type.startsWith('image/')
+			? `Uploading ${compressedMB} MB (compressed from ${originalMB} MB)…`
+			: `Uploading ${compressedMB} MB…`;
+		  toast(label);
+		  
+		  // Upload to Google Drive and get the live URL back
+		  mediaUrl = await uploadToDrive(fileToUpload);
+		  if (!mediaUrl) throw new Error('Google Drive did not return a URL.');
+		}
+  
+		// ── FIXED: We use 'mediaUrl' here, not 'result.url', and added 'icon_name' ──
+		const payload = {
+		  category: contentForm.category,
+		  title: contentForm.title,
+		  description: contentForm.description,
+		  icon_name: contentForm.icon_name 
+		};
+		
+		if (mediaUrl) payload.media_url = mediaUrl;
+  
+		if (editingId) {
+		  const { error } = await supabase.from('mamey_site_content').update(payload).eq('id', editingId);
+		  if (error) throw error;
+		  toast('Content updated successfully!');
+		} else {
+		  payload.author_id = session.user.id;
+		  const { error } = await supabase.from('mamey_site_content').insert([payload]);
+		  if (error) throw error;
+		  toast('Content published to live site!');
+		}
+  
+		cancelEdit();
+		fetchLiveContent();
+	  } catch (err) {
+		console.error(err);
+		toast('Operation failed: ' + err.message, 'error');
+	  } finally {
+		setLoading(false);
+		setUploading(false);
+		setUploadProgress(0);
 	  }
-
-	  const payload = {
-		category:    contentForm.category,
-		title:       contentForm.title.trim(),
-		description: contentForm.description.trim(),
-		icon_name:   contentForm.icon_name,
-	  };
-	  if (mediaUrl) payload.media_url = mediaUrl;
-
-	  if (editingId) {
-		const { error } = await supabase.from('mamey_site_content').update(payload).eq('id', editingId);
-		if (error) throw error;
-		toast('Content updated successfully!');
-	  } else {
-		payload.author_id = session.user.id;
-		const { error } = await supabase.from('mamey_site_content').insert([payload]);
-		if (error) throw error;
-		toast('Content published to live site!');
-	  }
-
-	  cancelEdit();
-	  fetchLiveContent();
-	} catch (err) {
-	  console.error(err);
-	  toast('Operation failed: ' + err.message, 'error');
-	} finally {
-	  setLoading(false);
-	  setUploading(false);
-	}
-  };
-
+	};
   /* ── Login ── */
   const handleLogin = async (e) => {
 	e.preventDefault();
@@ -400,6 +501,50 @@ export default function AdminDashboard() {
   if (!session) {
 	return (
 	  <>
+		<style>{`
+		  :root {
+			--navy: #0d1b2a; --gold: #d4af37;
+			--blue-mid: #d4af37; --blue-glow: rgba(212,175,55,0.35);
+			--fg: #1a1a1a; --fg-muted: #666; --fg-subtle: #999;
+			--border: rgba(0,0,0,0.09); --bg: #f4f6f9; --panel-bg: #ffffff;
+			--navbar-h: 64px; --r-sm: 8px; --r-md: 12px; --r-lg: 16px; --r-full: 999px;
+		  }
+		  .adm-login-wrap {
+			min-height: 100vh; display: flex; align-items: center; justify-content: center;
+			background: var(--bg); padding: clamp(16px,4vw,32px);
+			font-family: 'DM Sans', system-ui, sans-serif;
+		  }
+		  .adm-login-card {
+			background: white; border-radius: var(--r-lg); border: 1px solid var(--border);
+			box-shadow: 0 8px 40px rgba(0,0,0,0.1);
+			padding: clamp(28px,5vw,48px); width: 100%; max-width: 400px;
+		  }
+		  .adm-login-logo { text-align: center; margin-bottom: 28px; }
+		  .adm-login-logo h2 { font-size: 1.3rem; font-weight: 700; color: var(--navy); margin: 0 0 6px; }
+		  .adm-login-logo p  { font-size: 13px; color: var(--fg-muted); margin: 0; }
+		  .adm-form { display: flex; flex-direction: column; gap: 16px; }
+		  .adm-field { display: flex; flex-direction: column; gap: 6px; }
+		  .adm-label { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--fg-muted); }
+		  .adm-input {
+			width: 100%; padding: 10px 13px; border: 1.5px solid var(--border);
+			border-radius: var(--r-sm); font-size: 13.5px; color: var(--fg);
+			background: #fdfdfd; outline: none; box-sizing: border-box; font-family: inherit;
+			transition: border-color 0.15s, box-shadow 0.15s;
+		  }
+		  .adm-input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(212,175,55,0.15); }
+		  .adm-submit {
+			width: 100%; padding: 13px 20px; border: none; border-radius: var(--r-md);
+			font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit;
+			transition: opacity 0.2s, transform 0.15s;
+		  }
+		  .adm-submit:disabled { opacity: 0.55; cursor: not-allowed; }
+		  .adm-submit.mode-create { background: var(--navy); color: white; }
+		  .adm-submit:hover:not(:disabled) { opacity: 0.88; }
+		  @keyframes toastIn {
+			from { opacity: 0; transform: translateY(12px) scale(0.95); }
+			to   { opacity: 1; transform: translateY(0) scale(1); }
+		  }
+		`}</style>
 		<div className="adm-login-wrap">
 		  <div className="adm-login-card">
 			<div className="adm-login-logo">
@@ -465,6 +610,276 @@ export default function AdminDashboard() {
   ───────────────────────────────────────── */
   return (
 	<>
+	  <style>{`
+		/* ── CSS VARIABLES ── */
+		:root {
+		  --navy:      #0d1b2a;
+		  --gold:      #d4af37;
+		  --blue-mid:  #d4af37;
+		  --blue-glow: rgba(212,175,55,0.35);
+		  --fg:        #1a1a1a;
+		  --fg-muted:  #666;
+		  --fg-subtle: #999;
+		  --border:    rgba(0,0,0,0.09);
+		  --bg:        #f4f6f9;
+		  --panel-bg:  #ffffff;
+		  --navbar-h:  64px;
+		  --r-sm:      8px;
+		  --r-md:      12px;
+		  --r-lg:      16px;
+		  --r-full:    999px;
+		}
+
+		/* ── SHELL ── */
+		.adm-shell {
+		  min-height: 100vh;
+		  background: var(--bg);
+		  padding: clamp(16px, 3vw, 32px);
+		  font-family: 'DM Sans', system-ui, sans-serif;
+		  color: var(--fg);
+		}
+
+		/* ── TOP BAR ── */
+		.adm-topbar {
+		  display: flex;
+		  align-items: center;
+		  justify-content: space-between;
+		  flex-wrap: wrap;
+		  gap: 12px;
+		  margin-bottom: clamp(20px, 3vw, 32px);
+		  padding-bottom: 20px;
+		  border-bottom: 1px solid var(--border);
+		}
+		.adm-topbar-title {
+		  font-size: clamp(1.2rem, 2.5vw, 1.6rem);
+		  font-weight: 700;
+		  color: var(--navy);
+		  margin: 0 0 4px 0;
+		}
+		.adm-topbar-meta {
+		  font-size: 13px;
+		  color: var(--fg-muted);
+		  margin: 0;
+		}
+
+		/* ── TWO-COLUMN GRID ── */
+		.adm-grid {
+		  display: grid;
+		  grid-template-columns: 360px 1fr;
+		  gap: clamp(16px, 2.5vw, 28px);
+		  align-items: start;
+		}
+		@media (max-width: 860px) {
+		  .adm-grid { grid-template-columns: 1fr; }
+		}
+
+		/* ── PANELS ── */
+		.adm-panel {
+		  background: var(--panel-bg);
+		  border-radius: var(--r-lg);
+		  border: 1px solid var(--border);
+		  box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+		  overflow: hidden;
+		}
+		.adm-panel.editing {
+		  border-color: rgba(212,175,55,0.5);
+		  box-shadow: 0 0 0 3px rgba(212,175,55,0.12), 0 4px 20px rgba(0,0,0,0.08);
+		}
+		.adm-panel-header {
+		  display: flex;
+		  align-items: center;
+		  justify-content: space-between;
+		  padding: 16px 20px;
+		  border-bottom: 1px solid var(--border);
+		  background: #fafafa;
+		}
+		.adm-panel-title {
+		  display: flex;
+		  align-items: center;
+		  gap: 8px;
+		  font-weight: 700;
+		  font-size: 13.5px;
+		  color: var(--navy);
+		  text-transform: uppercase;
+		  letter-spacing: 0.5px;
+		}
+		.adm-panel-title.editing { color: #8a6800; }
+
+		/* ── FORM ── */
+		.adm-form { padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+		.adm-field { display: flex; flex-direction: column; gap: 6px; }
+		.adm-label {
+		  font-size: 11.5px;
+		  font-weight: 700;
+		  text-transform: uppercase;
+		  letter-spacing: 0.6px;
+		  color: var(--fg-muted);
+		}
+		.adm-input, .adm-select, .adm-textarea {
+		  width: 100%;
+		  padding: 10px 13px;
+		  border: 1.5px solid var(--border);
+		  border-radius: var(--r-sm);
+		  font-size: 13.5px;
+		  color: var(--fg);
+		  background: #fdfdfd;
+		  transition: border-color 0.15s, box-shadow 0.15s;
+		  outline: none;
+		  box-sizing: border-box;
+		  font-family: inherit;
+		}
+		.adm-input:focus, .adm-select:focus, .adm-textarea:focus {
+		  border-color: var(--gold);
+		  box-shadow: 0 0 0 3px rgba(212,175,55,0.15);
+		}
+		.adm-select { appearance: none; cursor: pointer; padding-right: 32px; }
+		.adm-textarea { resize: vertical; min-height: 100px; line-height: 1.55; }
+
+		/* ── UPLOAD ZONE ── */
+		.adm-upload-zone {
+		  display: flex;
+		  flex-direction: column;
+		  align-items: center;
+		  justify-content: center;
+		  gap: 8px;
+		  padding: 22px 16px;
+		  border: 2px dashed var(--border);
+		  border-radius: var(--r-md);
+		  cursor: pointer;
+		  text-align: center;
+		  transition: border-color 0.2s, background 0.2s;
+		  color: var(--fg-subtle);
+		  background: #fafafa;
+		}
+		.adm-upload-zone:hover, .adm-upload-zone.has-file {
+		  border-color: var(--gold);
+		  background: #fffdf0;
+		  color: var(--fg);
+		}
+		.adm-upload-hint { font-size: 13px; color: var(--fg-muted); }
+		.adm-upload-filename { font-size: 13px; font-weight: 600; color: var(--navy); word-break: break-all; }
+
+		/* ── SUBMIT BUTTON ── */
+		.adm-submit {
+		  width: 100%;
+		  padding: 13px 20px;
+		  border: none;
+		  border-radius: var(--r-md);
+		  font-size: 14px;
+		  font-weight: 700;
+		  cursor: pointer;
+		  letter-spacing: 0.3px;
+		  transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s;
+		  font-family: inherit;
+		}
+		.adm-submit:hover:not(:disabled) { opacity: 0.88; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(0,0,0,0.12); }
+		.adm-submit:disabled { opacity: 0.55; cursor: not-allowed; }
+		.adm-submit.mode-create { background: var(--navy); color: white; }
+		.adm-submit.mode-update { background: linear-gradient(135deg, #8a6800, #d4af37); color: white; }
+
+		/* ── ACTION BUTTONS ── */
+		.adm-btn-edit {
+		  display: inline-flex; align-items: center; gap: 5px;
+		  padding: 6px 12px; border-radius: var(--r-sm);
+		  border: 1.5px solid var(--border);
+		  background: white; color: var(--fg);
+		  font-size: 12px; font-weight: 600; cursor: pointer;
+		  transition: all 0.15s; font-family: inherit;
+		}
+		.adm-btn-edit:hover { border-color: var(--navy); color: var(--navy); background: #f0f4ff; }
+		.adm-btn-delete {
+		  display: inline-flex; align-items: center; gap: 5px;
+		  padding: 6px 12px; border-radius: var(--r-sm);
+		  border: 1.5px solid transparent;
+		  background: #fef2f2; color: #c62828;
+		  font-size: 12px; font-weight: 600; cursor: pointer;
+		  transition: all 0.15s; font-family: inherit;
+		}
+		.adm-btn-delete:hover { background: #c62828; color: white; }
+		.adm-action-row { display: flex; gap: 6px; justify-content: flex-end; flex-wrap: wrap; }
+
+		/* ── TABLE ── */
+		.adm-table-wrap { overflow-x: auto; }
+		.adm-table {
+		  width: 100%;
+		  border-collapse: collapse;
+		  font-size: 13px;
+		}
+		.adm-table thead tr {
+		  background: #f8f9fb;
+		  border-bottom: 2px solid var(--border);
+		}
+		.adm-table th {
+		  padding: 11px 14px;
+		  text-align: left;
+		  font-size: 11px;
+		  font-weight: 700;
+		  text-transform: uppercase;
+		  letter-spacing: 0.6px;
+		  color: var(--fg-muted);
+		  white-space: nowrap;
+		}
+		.adm-table td {
+		  padding: 12px 14px;
+		  border-bottom: 1px solid var(--border);
+		  vertical-align: middle;
+		}
+		.adm-table tbody tr { transition: background 0.12s; }
+		.adm-table tbody tr:hover { background: #f9fafb; }
+		.adm-table tbody tr.row-editing { background: #fffdf0; }
+		.adm-table tbody tr:last-child td { border-bottom: none; }
+
+		/* ── BADGE ── */
+		.adm-badge {
+		  display: inline-block;
+		  padding: 3px 9px;
+		  border-radius: var(--r-full);
+		  font-size: 11px;
+		  font-weight: 700;
+		  text-transform: capitalize;
+		  white-space: nowrap;
+		}
+
+		/* ── MISC ── */
+		.adm-media-link {
+		  display: inline-flex; align-items: center; gap: 4px;
+		  font-size: 12px; font-weight: 600; color: var(--navy);
+		  text-decoration: none; padding: 4px 8px;
+		  border-radius: var(--r-sm); border: 1px solid var(--border);
+		  transition: all 0.15s;
+		}
+		.adm-media-link:hover { background: var(--navy); color: white; }
+		.adm-none { color: var(--fg-subtle); font-size: 13px; }
+		.adm-empty {
+		  padding: 40px 20px; text-align: center;
+		  color: var(--fg-subtle); font-size: 13.5px;
+		}
+
+		/* ── LOGIN ── */
+		.adm-login-wrap {
+		  min-height: 100vh;
+		  display: flex; align-items: center; justify-content: center;
+		  background: var(--bg);
+		  padding: clamp(16px, 4vw, 32px);
+		}
+		.adm-login-card {
+		  background: white;
+		  border-radius: var(--r-lg);
+		  border: 1px solid var(--border);
+		  box-shadow: 0 8px 40px rgba(0,0,0,0.1);
+		  padding: clamp(28px, 5vw, 48px);
+		  width: 100%; max-width: 400px;
+		}
+		.adm-login-logo { text-align: center; margin-bottom: 28px; }
+		.adm-login-logo h2 { font-size: 1.3rem; font-weight: 700; color: var(--navy); margin: 0 0 6px; }
+		.adm-login-logo p  { font-size: 13px; color: var(--fg-muted); margin: 0; }
+		.adm-login-card .adm-form { padding: 0; }
+
+		@keyframes toastIn {
+		  from { opacity: 0; transform: translateY(12px) scale(0.95); }
+		  to   { opacity: 1; transform: translateY(0) scale(1); }
+		}
+	  `}</style>
 	  <div className="adm-shell">
 
 		{/* ── TOP BAR ── */}
@@ -625,6 +1040,23 @@ export default function AdminDashboard() {
 				</label>
 			  </div>
 
+			  {uploading && (
+				<div style={{ marginTop: 8 }}>
+				  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--fg-muted)', marginBottom: 4 }}>
+					<span>Uploading to Supabase Storage…</span>
+					<span>{uploadProgress}%</span>
+				  </div>
+				  <div style={{ height: 4, background: 'var(--border)', borderRadius: 99, overflow: 'hidden' }}>
+					<div style={{
+					  height: '100%',
+					  width: `${uploadProgress || 30}%`,
+					  background: 'linear-gradient(90deg, var(--navy), var(--gold))',
+					  borderRadius: 99,
+					  transition: 'width 0.4s ease',
+					}} />
+				  </div>
+				</div>
+			  )}
 			  {/* Submit */}
 			  <button
 				type="submit"
@@ -632,7 +1064,7 @@ export default function AdminDashboard() {
 				className={`adm-submit ${editingId ? 'mode-update' : 'mode-create'}`}
 			  >
 				{uploading
-				  ? 'Uploading to Drive…'
+				  ? `Uploading… ${uploadProgress}%`
 				  : loading
 					? 'Processing…'
 					: editingId

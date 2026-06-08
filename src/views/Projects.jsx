@@ -1,41 +1,14 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useContext } from 'react';
 import { supabase } from '../supabaseClient';
+import { AppContext } from '../context/AppContext'; // Imported Context
 
 /* ── SVG Icons ── */
-const FolderIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" width="52" height="52">
-	<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-  </svg>
-);
-const EyeIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="15" height="15">
-	<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-	<circle cx="12" cy="12" r="3" />
-  </svg>
-);
-const DownloadIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="15" height="15">
-	<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-	<polyline points="7 10 12 15 17 10" />
-	<line x1="12" y1="15" x2="12" y2="3" />
-  </svg>
-);
-const PlayIcon = () => (
-  <svg viewBox="0 0 24 24" fill="currentColor" width="28" height="28">
-	<polygon points="5 3 19 12 5 21 5 3" />
-  </svg>
-);
-const CloseIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="22" height="22">
-	<line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-  </svg>
-);
-const CalendarIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width="14" height="14">
-	<rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" />
-	<line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
-  </svg>
-);
+const FolderIcon = () => ( <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" width="52" height="52"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /></svg> );
+const EyeIcon = () => ( <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="15" height="15"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg> );
+const DownloadIcon = () => ( <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="15" height="15"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg> );
+const PlayIcon = () => ( <svg viewBox="0 0 24 24" fill="currentColor" width="28" height="28"><polygon points="5 3 19 12 5 21 5 3" /></svg> );
+const CloseIcon = () => ( <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="22" height="22"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg> );
+const CalendarIcon = () => ( <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg> );
 
 /* ────────────────────────────────────────────────
    GOOGLE DRIVE URL RESOLVER
@@ -43,18 +16,14 @@ const CalendarIcon = () => (
 function resolveGoogleDriveUrl(rawUrl) {
   if (!rawUrl) return null;
   const url = rawUrl.trim();
-
   if (url.includes('export=download') || url.includes('uc?id')) return url;
-
   let fileId = null;
   const matchFile = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
   if (matchFile) fileId = matchFile[1];
-
   if (!fileId) {
 	const matchOpen = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
 	if (matchOpen) fileId = matchOpen[1];
   }
-
   if (fileId) return `https://drive.google.com/uc?export=download&id=${fileId}`;
   return url;
 }
@@ -62,7 +31,6 @@ function resolveGoogleDriveUrl(rawUrl) {
 function getDriveThumbnail(rawUrl) {
   const url = rawUrl?.trim();
   if (!url) return null;
-
   let fileId = null;
   const matchFile = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
   if (matchFile) fileId = matchFile[1];
@@ -84,8 +52,9 @@ function detectMediaType(url) {
   return 'download';
 }
 
-/* ── Lightbox Modal (Upgraded to support PDFs) ── */
+/* ── Lightbox Modal ── */
 function LightboxModal({ proj, onClose }) {
+  const { t } = useContext(AppContext); // Added context here
   const { title, description, media_url, created_at } = proj;
   const direct = resolveGoogleDriveUrl(media_url);
   const type = detectMediaType(media_url);
@@ -120,7 +89,7 @@ function LightboxModal({ proj, onClose }) {
 		  {description && <p className="prj-modal-desc">{description}</p>}
 		  <div className="prj-modal-actions">
 			<a href={direct} target="_blank" rel="noreferrer" className="prj-btn prj-btn-primary" download>
-			  <DownloadIcon /> Download
+			  <DownloadIcon /> {t?.downloadDocument ?? 'Download'}
 			</a>
 		  </div>
 		</div>
@@ -138,12 +107,13 @@ function useReveal(threshold = 0.08) {
 	const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) setVisible(true); }, { threshold });
 	obs.observe(el);
 	return () => obs.disconnect();
-  }, []);
+  }, [threshold]);
   return [ref, visible];
 }
 
 /* ── Single Project Card ── */
 function ProjectCard({ proj, index, parentVisible, onClick }) {
+  const { t } = useContext(AppContext); // Added context here
   const [imgSrc, setImgSrc] = useState(null);
   const [imgError, setImgError] = useState(false);
   const type = detectMediaType(proj.media_url);
@@ -185,7 +155,7 @@ function ProjectCard({ proj, index, parentVisible, onClick }) {
 		  </>
 		) : type === 'pdf' ? (
 		   <div className="prj-card-placeholder" style={{ background: '#082d49', color: '#c9a84c', fontWeight: 'bold' }}>
-			 📄 PDF Document
+			 📄 {t?.pdfDocument ?? 'PDF Document'}
 		   </div>
 		) : (
 		  <div className="prj-card-placeholder">
@@ -195,7 +165,7 @@ function ProjectCard({ proj, index, parentVisible, onClick }) {
 		
 		{proj.media_url && (
 		  <div className="prj-card-hover-overlay">
-			<EyeIcon /> View
+			<EyeIcon /> {t?.viewProject ?? 'View'}
 		  </div>
 		)}
 	  </div>
@@ -216,6 +186,7 @@ function ProjectCard({ proj, index, parentVisible, onClick }) {
 }
 
 export default function Projects() {
+  const { t } = useContext(AppContext);
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [active, setActive] = useState(null);
@@ -281,7 +252,6 @@ export default function Projects() {
 		  border-radius: 18px;
 		  border: 1px solid rgba(0,0,0,0.06);
 		  overflow: hidden;
-		  /* Removed opacity and transform so it ALWAYS shows */
 		  transition: box-shadow 0.3s, border-color 0.3s, transform 0.3s;
 		  cursor: pointer;
 		}
@@ -447,20 +417,20 @@ export default function Projects() {
 	  <div className="prj-root">
 
 		<div className="prj-header">
-		  <p className="prj-kicker">Track Record</p>
-		  <h1 className="prj-h1">Projects &amp; Operations</h1>
-		  <p className="prj-sub">A portfolio of executed contracts, logistics operations, and ongoing supply chain achievements across the region.</p>
+		  <p className="prj-kicker">{t?.projectsKicker ?? 'Track Record'}</p>
+		  <h1 className="prj-h1">{t?.projectsTitle ?? 'Projects & Operations'}</h1>
+		  <p className="prj-sub">{t?.projectsSub ?? 'A portfolio of executed contracts, logistics operations, and ongoing supply chain achievements across the region.'}</p>
 		</div>
 
 		{loading ? (
 		  <div className="prj-loading">
 			<div className="prj-spinner" />
-			<p>Loading project records…</p>
+			<p>{t?.projectsLoading ?? 'Loading project records…'}</p>
 		  </div>
 		) : projects.length === 0 ? (
 		  <div style={{ textAlign: 'center', padding: '80px 20px', color: 'var(--text-muted, #888)' }}>
 			<div style={{ opacity: 0.2, marginBottom: 16 }}><FolderIcon /></div>
-			<p>No active projects documented yet.</p>
+			<p>{t?.projectsEmpty ?? 'No active projects documented yet.'}</p>
 		  </div>
 		) : (
 		  <div className="prj-grid" ref={gridRef}>
