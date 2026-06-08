@@ -204,7 +204,7 @@ export default function Home() {
 		  letter-spacing: 3px;
 		  text-transform: uppercase;
 		  color: var(--gold, #d4af37);
-		  font-weight: 700; /* Added for boldness */
+		  font-weight: 800; /* Bolded the gold kicker */
 		  margin: 0;
 		  opacity: 0;
 		  transform: translateY(12px);
@@ -221,35 +221,38 @@ export default function Home() {
 		  flex-shrink: 0;
 		}
 
-		/* ── VISITOR COUNTER PILL (FIXED) ── */
+		/* ── VISITOR COUNTER PILL (UPGRADED - BIGGER & CLEARER) ── */
 		.mmy-visitor-pill {
 		  display: flex;
 		  align-items: center;
-		  gap: 7px;
-		  background: rgba(255, 255, 255, 0.15); /* Increased opacity for better visibility */
-		  border: 1px solid rgba(212, 175, 55, 0.5); /* Stronger border */
-		  backdrop-filter: blur(8px);
+		  gap: 10px;
+		  background: rgba(255, 255, 255, 0.18); /* Much brighter background */
+		  border: 2px solid var(--gold, #d4af37); /* Thicker pure gold border */
+		  backdrop-filter: blur(12px);
 		  border-radius: 50px;
-		  padding: 6px 14px 6px 10px;
-		  color: white; /* Changed to white for better contrast */
-		  font-size: 0.75rem;
-		  font-weight: 600; /* Made text bolder */
+		  padding: 10px 22px; /* Doubled the padding to make it larger */
+		  color: #ffffff; /* Pure white text for max contrast */
+		  font-size: 0.95rem; /* Larger font size */
+		  font-weight: 600;
 		  letter-spacing: 0.5px;
 		  pointer-events: none;
-		  opacity: 1; /* Forced visibility */
-		  z-index: 10; /* Ensures it stays on top */
+		  opacity: 0;
+		  transition: opacity 0.5s ease 0.8s;
+		  box-shadow: 0 8px 24px rgba(0,0,0,0.25); /* Added strong drop shadow so it pops */
 		}
 		.mmy-visitor-pill.visible { opacity: 1; }
 		.mmy-visitor-dot {
-		  width: 6px; height: 6px;
+		  width: 10px; height: 10px; /* Bigger glowing dot */
 		  border-radius: 50%;
-		  background: var(--gold, #d4af37);
+		  background: #4ade80; /* Bright "Live" green to signify active visitors */
+		  box-shadow: 0 0 10px #4ade80; /* Glow effect */
 		  flex-shrink: 0;
 		  animation: mmy-pulse 2s infinite;
 		}
 		.mmy-visitor-count {
 		  color: var(--gold, #d4af37);
-		  font-weight: 600;
+		  font-size: 1.2rem; /* Massive number font */
+		  font-weight: 900; /* Extra bold */
 		}
 		@keyframes mmy-pulse {
 		  0%, 100% { opacity: 1; transform: scale(1); }
@@ -289,7 +292,7 @@ export default function Home() {
 		  gap: 10px;
 		  background: var(--gold, #d4af37);
 		  color: var(--navy, #0d1b2a);
-		  font-weight: 600;
+		  font-weight: 700; /* Bolder button text */
 		  font-size: 0.88rem;
 		  letter-spacing: 0.5px;
 		  padding: 14px 28px;
@@ -439,6 +442,7 @@ export default function Home() {
 		.mmy-origin-text span {
 		  display: block;
 		  font-size: 10px;
+		  font-weight: 800; /* Bolded gold text */
 		  text-transform: uppercase;
 		  letter-spacing: 3px;
 		  color: var(--gold, #d4af37);
@@ -472,7 +476,7 @@ export default function Home() {
 		  font-family: 'Playfair Display', serif;
 		  font-size: clamp(1.4rem, 3.5vw, 2rem);
 		  color: var(--gold, #d4af37);
-		  font-weight: 700; /* Added for boldness */
+		  font-weight: 900; /* Bolder gold text */
 		  line-height: 1;
 		}
 		.mmy-origin-badge-inner small {
