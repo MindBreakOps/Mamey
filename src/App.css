@@ -1,4 +1,3 @@
-
 /* ── Fonts ── */
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Playfair+Display:wght@400;600;700&display=swap');
 
@@ -21,7 +20,7 @@
   --r-full: 9999px;
 
   /* ── Surfaces (light) ── */
-  --bg:          #ffffff;
+ --bg:            #f8fafc;
   --bg-soft:     #f8fafc;
   --bg-muted:    #f1f5f9;
   --bg-card:     #ffffff;
@@ -35,9 +34,9 @@
   --fg-inverse:  #ffffff;
 
   /* ── Brand palette ── */
-  --navy:        #1f5c86;
-  --navy-dark:   #082d49;
-  --navy-mid:    #155b94;
+  --navy:        #0a192f;
+  --navy-dark:   #020c1b;
+  --navy-mid:    #112240;
   --blue:        #1C75BC;
   --blue-light:  #e6f2fb;
   --blue-mid:    rgba(28,117,188,0.12);
@@ -47,6 +46,11 @@
   --gold:        #c9a84c;
   --gold-pale:   #e8d5a0;
   --gold-dim:    rgba(201,168,76,0.15);
+
+  /* ── ADDED TO FIX INVISIBLE/FLAT COLORS IN PAGES ── */
+  --text-main:   #0a192f;
+  --text-muted:  #64748b;
+  --bg-light:    #f4f4f0;
 
   /* ── Borders ── */
   --border:      #e2e8f0;
@@ -59,6 +63,10 @@
   --shadow-md:   0 4px 20px rgba(15,25,35,0.1);
   --shadow-lg:   0 8px 40px rgba(15,25,35,0.12);
   --shadow-navy: 0 4px 20px rgba(13,58,94,0.2);
+  /* ── ADDED TO FIX INVISIBLE/FLAT COLORS IN PAGES ── */
+  --text-main:   #0a192f;
+  --text-muted:  #64748b;
+  --bg-light:    #f4f4f0;
 
   /* ── Typography ── */
   --font-body:    'IBM Plex Sans', sans-serif;
@@ -146,6 +154,8 @@ ul, ol   { list-style: none; }
   flex: 1;
   padding-top: var(--sp-40);
   padding-bottom: var(--sp-80);
+  width: 100%;
+  overflow-x: hidden;
 }
 
 /* Sidebar layout shell */
@@ -763,3 +773,7 @@ ul, ol   { list-style: none; }
 [dir="rtl"] .footer-contact-row { flex-direction: row-reverse; }
 [dir="rtl"] .ml-auto { margin-left: unset; margin-right: auto; }
 [dir="rtl"] .mr-auto { margin-right: unset; margin-left: auto; }
+/* ══════════════════════════════════════
+   EMERGENCY OVERRIDE: INVISIBLE CONTENT
+══════════════════════════════════════ */
+/* Forces dynamically loaded Supabase content to be visible */

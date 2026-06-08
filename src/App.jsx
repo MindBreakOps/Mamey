@@ -22,6 +22,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import './App.css';
 
 // A small wrapper to hide the footer on the Admin Dashboard
+
 function LayoutWrapper({ children }) {
   const location = useLocation();
   const isAdmin = location.pathname === '/admindashboard';
@@ -29,7 +30,18 @@ function LayoutWrapper({ children }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <Navbar />
-      <main className={isAdmin ? '' : 'main-content'} style={{ flex: 1 }}>
+      <main 
+        className={isAdmin ? '' : 'main-content'} 
+        style={{ 
+          flex: 1, 
+          width: '100%', 
+          maxWidth: isAdmin ? 'none' : '1200px', 
+          margin: '0 auto',
+          alignSelf: 'center', /* This forces perfect centering */
+          paddingLeft: isAdmin ? '0' : 'var(--content-px)',
+          paddingRight: isAdmin ? '0' : 'var(--content-px)'
+        }}
+      >
         {children}
       </main>
       {!isAdmin && <Footer />}
